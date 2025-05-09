@@ -1,0 +1,571 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Option Analyzer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            font-size: 14px;
+        }
+
+        .container {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .controls {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .threshold-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .buffer-calc {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .buffer-calc label {
+            margin-right: 5px;
+            font-size: 0.9em;
+        }
+
+        .file-section {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 15px;
+        }
+
+        .file-section:last-child {
+            border-bottom: none;
+        }
+
+        .file-header {
+            font-size: 1.1em;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        button {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .ath-label {
+            color: #333;
+            min-width: 80px;
+            display: inline-block;
+            font-size: 0.9em;
+        }
+
+        .ath-value-input {
+            width: 90px;
+        }
+
+        .base-buffer-input, .k-input {
+            width: 70px;
+        }
+
+        .yield-input {
+            width: 90px;
+        }
+
+        .calc-display {
+            font-size: 0.85em;
+            color: #000;
+        }
+
+        .calc-display table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .calc-display td {
+            padding: 6px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+        }
+
+        .calc-display td:first-child {
+            min-width: 100px;
+        }
+
+        .matching-rows {
+            font-size: 0.85em;
+            color: #000;
+            width: 100%;
+        }
+
+        .matching-rows table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .matching-rows th, .matching-rows td {
+            padding: 4px;
+            border: 1px solid #ddd;
+            text-align: left;
+            font-size: 0.8em;
+        }
+
+        .matching-rows th {
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.85em;
+        }
+
+        th, td {
+            padding: 6px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #666;
+            padding: 10px;
+        }
+
+        .ath-note {
+            font-size: 0.75em;
+            color: #d32f2f;
+            margin-top: 5px;
+        }
+
+        .ath-warning {
+            font-size: 0.75em;
+            color: #e67e22;
+            margin-top: 5px;
+        }
+
+        @media (min-width: 768px) {
+            .controls {
+                flex-direction: row;
+            }
+            .threshold-controls {
+                flex-direction: row;
+            }
+            input[type="text"],
+            input[type="number"],
+            button {
+                width: auto;
+            }
+            .ath-label {
+                min-width: 100px;
+            }
+            .ath-value-input {
+                width: 100px;
+            }
+            .base-buffer-input, .k-input {
+                width: 80px;
+            }
+            .yield-input {
+                width: 100px;
+            }
+            .file-section {
+                display: flex;
+                gap: 20px;
+            }
+            .left-section {
+                width: 50%;
+            }
+            .matching-rows-container {
+                width: 50%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="pageTitle">Stock Option Analyzer</h1>
+        <div class="controls">
+            <input type="text" id="stockSymbolInput" placeholder="Enter stock symbol(s), e.g., AAPL,GOOGL">
+            <button id="processButton" onclick="processStocks()">Process</button>
+        </div>
+        <div id="bufferCalcContainer" class="buffer-calc"></div>
+        <div id="tableContainer"></div>
+    </div>
+
+    <script type="text/javascript">
+        // Store data for each stock
+        let fileData = {};
+
+        // Fetch stock data (ATH and Current Price) from Financial Modeling Prep API
+        async function fetchStockData(stockSymbol) {
+            console.log(`fetchStockData: Fetching data for ${stockSymbol}`);
+            const apiKey = 'IMmSbXF9Ycs8eZ5qUdQrsnY2k4WPW5NQ';
+            const historicalUrl = `https://financialmodelingprep.com/api/v3/historical-price-full/${stockSymbol}?apikey=${apiKey}`;
+            const quoteUrl = `https://financialmodelingprep.com/api/v3/quote/${stockSymbol}?apikey=${apiKey}`;
+
+            try {
+                // Fetch historical data for ATH
+                const historicalResponse = await fetch(historicalUrl);
+                if (!historicalResponse.ok) {
+                    throw new Error(`HTTP error! Status: ${historicalResponse.status}`);
+                }
+                const historicalData = await historicalResponse.json();
+
+                let athValue = null;
+                let isFallback = false;
+                if (historicalData.historical && Array.isArray(historicalData.historical) && historicalData.historical.length > 0) {
+                    athValue = Math.max(...historicalData.historical.map(entry => {
+                        const close = parseFloat(entry.close);
+                        return isNaN(close) ? -Infinity : close;
+                    }));
+                    if (athValue === -Infinity || athValue <= 0) {
+                        athValue = null;
+                    } else {
+                        athValue = athValue.toFixed(2);
+                    }
+                }
+
+                // Fallback for MSTR
+                if (!athValue && stockSymbol === 'MSTR') {
+                    athValue = 543.0;
+                    isFallback = true;
+                }
+
+                // Fetch current price
+                const quoteResponse = await fetch(quoteUrl);
+                if (!quoteResponse.ok) {
+                    throw new Error(`HTTP error! Status: ${quoteResponse.status}`);
+                }
+                const quoteData = await quoteResponse.json();
+
+                let currentPrice = null;
+                if (quoteData && Array.isArray(quoteData) && quoteData.length > 0) {
+                    currentPrice = parseFloat(quoteData[0].price);
+                    if (!isNaN(currentPrice) && currentPrice > 0) {
+                        currentPrice = currentPrice.toFixed(2);
+                    } else {
+                        currentPrice = null;
+                    }
+                }
+
+                return { athValue, isFallback, currentPrice };
+            } catch (error) {
+                console.error(`fetchStockData: Error fetching data for ${stockSymbol}:`, error.message);
+                if (stockSymbol === 'MSTR') {
+                    return { athValue: 543.0, isFallback: true, currentPrice: null };
+                }
+                return { athValue: null, isFallback: false, currentPrice: null };
+            }
+        }
+
+        async function processStocks() {
+            console.log('processStocks: Function triggered');
+            try {
+                const stockInput = document.getElementById('stockSymbolInput');
+                if (!stockInput || !stockInput.value.trim()) {
+                    alert('Please enter at least one stock symbol');
+                    return;
+                }
+
+                const stockSymbols = stockInput.value.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
+                if (stockSymbols.length === 0) {
+                    alert('Please enter valid stock symbols');
+                    return;
+                }
+
+                // Clear previous data
+                fileData = {};
+                const bufferCalcContainer = document.getElementById('bufferCalcContainer');
+                const tableContainer = document.getElementById('tableContainer');
+                bufferCalcContainer.innerHTML = '';
+                tableContainer.innerHTML = '';
+
+                // Process each stock symbol
+                await Promise.all(stockSymbols.map(async (stockSymbol, index) => {
+                    console.log(`processStocks: Processing ${stockSymbol}`);
+                    const { athValue, isFallback, currentPrice } = await fetchStockData(stockSymbol);
+
+                    if (!currentPrice || !athValue) {
+                        alert(`Failed to fetch data for ${stockSymbol}`);
+                        return;
+                    }
+
+                    // Store data
+                    fileData[stockSymbol] = {
+                        csvData: [], // Placeholder, since we're not using CSV anymore
+                        currentPrice: parseFloat(currentPrice)
+                    };
+
+                    // Update page title
+                    if (stockSymbols.length === 1) {
+                        document.getElementById('pageTitle').textContent = `${stockSymbol} Option Analysis`;
+                    } else {
+                        document.getElementById('pageTitle').textContent = `Multiple Stocks Analysis`;
+                    }
+
+                    // Create section for this stock
+                    createFileSection(stockSymbol, index, athValue, isFallback);
+                    updateBufferCalc(stockSymbol);
+                    updateSecuredPuts(stockSymbol);
+                }));
+
+            } catch (error) {
+                console.error('processStocks: Unexpected error:', error);
+                alert('Unexpected error occurred while processing stocks');
+            }
+        }
+
+        function createFileSection(stockSymbol, index, athValue, isFallback) {
+            console.log(`createFileSection: Started for ${stockSymbol}`);
+            const bufferCalcContainer = document.getElementById('bufferCalcContainer');
+            const sectionId = `fileSection_${stockSymbol}_${index}`;
+            
+            const sectionHtml = `
+                <div class="file-section" id="${sectionId}">
+                    <div class="file-header">${stockSymbol} Analysis</div>
+                    <div>
+                        <label>Base Buffer (%):</label>
+                        <input type="number" class="base-buffer-input" id="baseBufferInput_${stockSymbol}" value="30" step="0.5" onchange="updateBufferCalc('${stockSymbol}')">
+                        <label>k:</label>
+                        <input type="number" class="k-input" id="kInput_${stockSymbol}" value="1" step="0.1" onchange="updateBufferCalc('${stockSymbol}')">
+                        <span id="athLabel_${stockSymbol}" class="ath-label">${stockSymbol} ATH :</span>
+                        <input type="number" class="ath-value-input" id="athValueInput_${stockSymbol}" value="${athValue || ''}" step="0.01" onchange="updateBufferCalc('${stockSymbol}')">
+                        <div id="athNote_${stockSymbol}" class="ath-note"></div>
+                        <div id="athWarning_${stockSymbol}" class="ath-warning">${isFallback ? 'API error, using fallback 52-week high' : ''}</div>
+                        <div id="calcDisplay_${stockSymbol}" class="calc-display"></div>
+                    </div>
+                    <div class="threshold-controls">
+                        <input type="number" class="yield-input" id="yieldInput_${stockSymbol}" placeholder="Yield Threshold (%)" value="2.5" step="0.1" onchange="updateSecuredPuts('${stockSymbol}')">
+                        <button onclick="updateSecuredPuts('${stockSymbol}')">Update</button>
+                    </div>
+                    <div id="securedPuts_${stockSymbol}" class="matching-rows"></div>
+                </div>
+            `;
+            
+            bufferCalcContainer.insertAdjacentHTML('beforeend', sectionHtml);
+
+            // Check for MSTR special case
+            const currentPrice = fileData[stockSymbol]?.currentPrice;
+            if (stockSymbol === 'MSTR' && currentPrice && parseFloat(currentPrice) < 440) {
+                document.getElementById(`athNote_${stockSymbol}`).textContent = 'Recommended ATH: 440';
+            }
+        }
+
+        function updateBufferCalc(stockSymbol) {
+            console.log(`updateBufferCalc: Started for ${stockSymbol}`);
+            const athValueInput = document.getElementById(`athValueInput_${stockSymbol}`);
+            const baseBufferInput = document.getElementById(`baseBufferInput_${stockSymbol}`);
+            const kInput = document.getElementById(`kInput_${stockSymbol}`);
+            const calcDisplay = document.getElementById(`calcDisplay_${stockSymbol}`);
+            const yieldInput = document.getElementById(`yieldInput_${stockSymbol}`);
+
+            if (!athValueInput || !baseBufferInput || !kInput || !calcDisplay || !yieldInput) {
+                console.warn(`updateBufferCalc: Required elements missing for ${stockSymbol}`);
+                return;
+            }
+
+            const athValue = parseFloat(athValueInput.value);
+            const baseBuffer = parseFloat(baseBufferInput.value) / 100;
+            const k = parseFloat(kInput.value);
+            const yieldThreshold = parseFloat(yieldInput.value) || 0;
+            const currentPrice = fileData[stockSymbol]?.currentPrice;
+
+            if (isNaN(athValue) || isNaN(baseBuffer) || isNaN(k) || isNaN(currentPrice)) {
+                calcDisplay.innerHTML = `
+                    <table>
+                        <tr><td>Current Price</td><td>N/A</td></tr>
+                        <tr><td>Price-to-ATH Ratio</td><td>N/A</td></tr>
+                        <tr><td>Buffer Percentage</td><td>N/A</td></tr>
+                        <tr><td>Strike</td><td>N/A</td></tr>
+                        <tr><td>Minimum Premium</td><td>N/A</td></tr>
+                    </table>
+                `;
+                return;
+            }
+
+            const priceToATHRatio = currentPrice / athValue;
+            const bufferPercentage = baseBuffer * Math.pow(priceToATHRatio, k);
+            const strike = currentPrice * (1 - bufferPercentage);
+
+            const performancePercentage = ((currentPrice - athValue) / athValue) * 100;
+            const performanceColorClass = performancePercentage >= 0 ? 'positive' : 'negative';
+            const performanceDisplay = `(${performancePercentage.toFixed(2)}%)`;
+
+            const strikeToATHPercentage = ((strike / athValue) - 1) * 100;
+            const strikeToATHColorClass = strikeToATHPercentage >= 0 ? 'positive' : 'negative';
+            const strikeToATHDisplay = `(${strikeToATHPercentage.toFixed(2)}%)`;
+
+            // Calculate the closest strike under the calculated strike that ends in 0 or 5
+            let closestStrike = Math.floor(strike / 5) * 5;
+            if (closestStrike > strike) {
+                closestStrike -= 5;
+            }
+            if (closestStrike < 0) closestStrike = 0;
+
+            // Calculate the Minimum Premium value: closestStrike * (yieldThreshold / 100)
+            const minimumPremiumValue = closestStrike !== null && !isNaN(yieldThreshold)
+                ? (closestStrike * (yieldThreshold / 100)).toFixed(2)
+                : 'N/A';
+
+            calcDisplay.innerHTML = `
+                <table>
+                    <tr><td>Current Price</td><td>$${currentPrice.toFixed(2)} <span class="${performanceColorClass}">${performanceDisplay}</span></td></tr>
+                    <tr><td>Price-to-ATH Ratio</td><td>${priceToATHRatio.toFixed(2)}</td></tr>
+                    <tr><td>Buffer Percentage</td><td><strong>${(bufferPercentage * 100).toFixed(2)}%</strong></td></tr>
+                    <tr><td>Strike</td><td><strong>$${strike.toFixed(2)}</strong> <span class="${strikeToATHColorClass}">${strikeToATHDisplay}</span></td></tr>
+                    <tr><td>Minimum Premium</td><td><strong>$${closestStrike.toFixed(2)}</strong> / <strong>$${minimumPremiumValue}</strong></td></tr>
+                </table>
+            `;
+
+            // Store the closestStrike for use in updateSecuredPuts
+            fileData[stockSymbol].closestStrike = closestStrike;
+        }
+
+        function updateSecuredPuts(stockSymbol) {
+            console.log(`updateSecuredPuts: Started for ${stockSymbol}`);
+            const yieldInput = document.getElementById(`yieldInput_${stockSymbol}`);
+            const securedPutsDisplay = document.getElementById(`securedPuts_${stockSymbol}`);
+            const currentPrice = fileData[stockSymbol]?.currentPrice;
+            const closestStrike = fileData[stockSymbol]?.closestStrike;
+
+            if (!yieldInput || !securedPutsDisplay || !currentPrice || closestStrike === undefined) {
+                console.warn(`updateSecuredPuts: Required elements missing for ${stockSymbol}`);
+                return;
+            }
+
+            const yieldThreshold = parseFloat(yieldInput.value) || 2.5;
+            const stockPrice = parseFloat(currentPrice);
+
+            // Determine increment based on stock price
+            const increment = stockPrice <= 50 ? 2 : 5;
+
+            // Generate at least 10 strike prices in increments, with the highest being closestStrike
+            const strikes = [];
+            const minStrikes = 10;
+            const startStrike = closestStrike - (minStrikes - 1) * increment;
+            for (let strike = startStrike; strike <= closestStrike; strike += increment) {
+                if (strike >= 0) {
+                    strikes.push(strike);
+                }
+            }
+            // Ensure at least 10 rows by adding more if needed
+            while (strikes.length < minStrikes && strikes[0] > 0) {
+                strikes.unshift(strikes[0] - increment);
+            }
+            if (strikes.length < minStrikes) {
+                strikes.push(...Array(minStrikes - strikes.length).fill(closestStrike).map((_, i) => closestStrike + i * increment));
+            }
+
+            let securedPutsHtml = '<strong>Secured Puts:</strong><table><thead><tr><th>Stock</th><th>Strike</th><th>Strike Rel (%)</th><th>Premium</th><th>Yield (%)</th></tr></thead><tbody>';
+
+            strikes.forEach(strike => {
+                const strikeRel = ((strike - stockPrice) / stockPrice) * 100;
+                const premium = (strike * (yieldThreshold / 100)).toFixed(2);
+                securedPutsHtml += `
+                    <tr>
+                        <td>${stockPrice.toFixed(2)}</td>
+                        <td>${strike.toFixed(2)}</td>
+                        <td>${strikeRel.toFixed(2)}%</td>
+                        <td>${premium}</td>
+                        <td>${yieldThreshold.toFixed(2)}%</td>
+                    </tr>
+                `;
+            });
+
+            securedPutsHtml += '</tbody></table>';
+            securedPutsDisplay.innerHTML = securedPutsHtml;
+        }
+    </script>
+</body>
+</html>
