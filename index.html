@@ -46,15 +46,15 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 10px;
-            background-color: #f5f5f5;
-            font-size: 14px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
         }
 
         .container {
-            background-color: white;
-            padding: 15px;
+            background-color: #ffffff;
+            padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
@@ -62,48 +62,54 @@
         h1 {
             color: #333;
             text-align: center;
-            font-size: 1.5em;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         .controls {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
         .threshold-controls {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
             margin-bottom: 10px;
         }
 
         .buffer-calc {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             padding: 10px;
-            background-color: #f8f9fa;
+            background-color: #ffffff;
             border-radius: 4px;
+            display: block;
         }
 
         .buffer-calc label {
-            margin-right: 5px;
-            font-size: 0.9em;
+            margin-right: 10px;
         }
 
         .file-section {
-            margin-bottom: 15px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 15px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: nowrap;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .file-section:last-child {
-            border-bottom: none;
+            margin-bottom: 0;
         }
 
         .file-header {
-            font-size: 1.1em;
+            font-size: 1.2em;
             color: #333;
             margin-bottom: 10px;
             font-weight: bold;
@@ -112,16 +118,13 @@
         input[type="text"],
         input[type="number"],
         button {
-            padding: 8px;
+            padding: 8px 15px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 0.9em;
-            width: 100%;
-            box-sizing: border-box;
         }
 
-        input[type="text"] {
-            min-width: 300px; /* Increased to ensure pre-filled symbols are fully visible */
+        #stockSymbolInput {
+            width: 400px;
         }
 
         button {
@@ -138,25 +141,23 @@
 
         .ath-label {
             color: #333;
-            min-width: 80px;
-            display: inline-block;
-            font-size: 0.9em;
+            min-width: 100px;
         }
 
         .ath-value-input {
-            width: 90px;
+            width: 100px;
         }
 
         .base-buffer-input, .k-input {
-            width: 70px;
+            width: 80px;
         }
 
-        .yield-input {
-            width: 90px;
+        .strike-rel-input, .yield-input {
+            width: 100px;
         }
 
         .calc-display {
-            font-size: 0.85em;
+            font-size: 0.9em;
             color: #000;
         }
 
@@ -166,17 +167,26 @@
         }
 
         .calc-display td {
-            padding: 6px;
-            border: 1px solid #ddd;
+            padding: 8px;
+            border: 1px solid transparent;
             vertical-align: top;
-        }
-
-        .calc-display td:first-child {
             min-width: 100px;
         }
 
+        .calc-display td:first-child {
+            min-width: 120px;
+        }
+
+        .matching-rows-container {
+            width: 50%;
+            margin-top: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
         .matching-rows {
-            font-size: 0.85em;
+            font-size: 0.9em;
             color: #000;
             width: 100%;
         }
@@ -188,32 +198,38 @@
         }
 
         .matching-rows th, .matching-rows td {
-            padding: 4px;
+            padding: 5px;
             border: 1px solid #ddd;
             text-align: left;
-            font-size: 0.8em;
         }
 
         .matching-rows th {
-            background-color: #f8f9fa;
+            background-color: #ffffff;
             color: #333;
         }
 
+        .left-section {
+            width: 50%;
+        }
+
         table {
-            width: 100%;
+            width: 45%;
             border-collapse: collapse;
             margin-top: 10px;
-            font-size: 0.85em;
+            margin-bottom: 20px;
+            display: inline-block;
+            vertical-align: top;
+            font-size: 0.9em;
         }
 
         th, td {
-            padding: 6px;
+            padding: 8px;
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
 
         th {
-            background-color: #f8f9fa;
+            background-color: #ffffff;
             color: #333;
         }
 
@@ -224,19 +240,43 @@
         .no-data {
             text-align: center;
             color: #666;
-            padding: 10px;
+            padding: 20px;
         }
 
-        .ath-note {
-            font-size: 0.75em;
-            color: #d32f2f;
-            margin-top: 5px;
+        .day-section {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: nowrap;
         }
 
-        .ath-warning {
-            font-size: 0.75em;
-            color: #e67e22;
-            margin-top: 5px;
+        .day-header {
+            background-color: #e9ecef;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+            color: #444;
+        }
+
+        .highlight-row {
+            background: #e0e0e0;
+        }
+
+        .high-yield-strike {
+            outline: 2px solid red;
+            outline-offset: -1px;
+        }
+
+        .best-option {
+            outline: 2px solid red;
+            outline-offset: -1px;
+        }
+
+        .threshold-match {
+            background: #d4edda;
         }
 
         .positive {
@@ -247,40 +287,98 @@
             color: red;
         }
 
-        @media (min-width: 768px) {
+        .ath-note {
+            font-size: 0.85em;
+            color: #d32f2f;
+            margin-top: 5px;
+        }
+
+        .ath-warning {
+            font-size: 0.85em;
+            color: #e67e22;
+            margin-top: 5px;
+        }
+
+        #deviceInfo {
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* Mobile optimizations */
+        @media only screen and (max-width: 768px) {
+            body {
+                padding: 10px;
+                max-width: 100%;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
             .controls {
-                flex-direction: row;
+                flex-direction: column;
+                align-items: stretch;
             }
-            .threshold-controls {
-                flex-direction: row;
+
+            #stockSymbolInput {
+                width: 100%;
+                max-width: 300px;
             }
-            input[type="text"],
-            input[type="number"],
+
             button {
-                width: auto;
-                min-width: 300px; /* Increased to ensure pre-filled symbols are fully visible */
+                padding: 6px 10px;
             }
-            .ath-label {
-                min-width: 100px;
-            }
-            .ath-value-input {
-                width: 100px;
-            }
-            .base-buffer-input, .k-input {
-                width: 80px;
-            }
-            .yield-input {
-                width: 100px;
-            }
+
             .file-section {
-                display: flex;
-                gap: 20px;
+                flex-direction: column;
+                flex-wrap: wrap;
+                padding: 15px;
+                margin-bottom: 20px;
             }
+
             .left-section {
-                width: 50%;
+                width: 100%;
             }
+
             .matching-rows-container {
-                width: 50%;
+                width: 100%;
+            }
+
+            .file-header {
+                font-size: 1em;
+            }
+
+            .ath-value-input, .base-buffer-input, .k-input, .yield-input {
+                width: 100%;
+                max-width: 80px;
+            }
+
+            .calc-display, .matching-rows {
+                font-size: 0.8em;
+            }
+
+            .calc-display table, .matching-rows table {
+                overflow-x: auto;
+                display: block;
+            }
+
+            .calc-display td {
+                padding: 5px;
+                min-width: 0;
+            }
+
+            .matching-rows th, .matching-rows td {
+                padding: 5px;
+            }
+
+            .threshold-controls {
+                flex-direction: column;
+                align-items: stretch;
             }
         }
     </style>
@@ -288,6 +386,7 @@
 <body>
     <div class="container">
         <h1 id="pageTitle">Stock Option Analyzer</h1>
+        <div id="deviceInfo"></div>
         <div class="controls">
             <input type="text" id="stockSymbolInput" placeholder="Enter stock symbol(s), e.g., AAPL,GOOGL" value="TQQQ,PLTR,MSTR,TSLA,NVDA,SOFI,BAC">
             <button id="processButton" onclick="processStocks()">Process</button>
@@ -297,6 +396,36 @@
     </div>
 
     <script type="text/javascript">
+        // Device detection function
+        function detectDevice() {
+            const userAgent = navigator.userAgent;
+            const isMobile = /Mobi|Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/.test(userAgent);
+            const deviceType = isMobile ? 'Mobile' : 'Desktop';
+            const resolution = `${window.innerWidth}x${window.innerHeight}`;
+            return {
+                deviceType,
+                browser: userAgent,
+                resolution
+            };
+        }
+
+        // Update device info display
+        function updateDeviceInfo() {
+            const { deviceType, browser, resolution } = detectDevice();
+            const deviceInfo = document.getElementById('deviceInfo');
+            deviceInfo.innerHTML = `
+                Device: ${deviceType}<br>
+                Browser: ${browser}<br>
+                Resolution: ${resolution}
+            `;
+        }
+
+        // Initial device info update
+        updateDeviceInfo();
+
+        // Update on window resize
+        window.addEventListener('resize', updateDeviceInfo);
+
         var gk_isXlsx = false;
         var gk_xlsxFileLookup = {};
         var gk_fileData = {};
@@ -451,23 +580,44 @@
             
             const sectionHtml = `
                 <div class="file-section" id="${sectionId}">
-                    <div class="file-header">${stockSymbol} Analysis (${companyName || 'Unknown'})</div>
-                    <div>
-                        <label>Base Buffer (%):</label>
-                        <input type="number" class="base-buffer-input" id="baseBufferInput_${stockSymbol}" value="30" step="0.5" onchange="updateBufferCalc('${stockSymbol}')">
-                        <label>k:</label>
-                        <input type="number" class="k-input" id="kInput_${stockSymbol}" value="1" step="0.1" onchange="updateBufferCalc('${stockSymbol}')">
-                        <span id="athLabel_${stockSymbol}" class="ath-label">${stockSymbol} ATH :</span>
-                        <input type="number" class="ath-value-input" id="athValueInput_${stockSymbol}" value="${athValue || ''}" step="0.01" onchange="updateBufferCalc('${stockSymbol}')">
-                        <div id="athNote_${stockSymbol}" class="ath-note"></div>
-                        <div id="athWarning_${stockSymbol}" class="ath-warning">${isFallback ? 'API error, using fallback 52-week high' : ''}</div>
-                        <div id="calcDisplay_${stockSymbol}" class="calc-display"></div>
+                    <div class="left-section">
+                        <div class="file-header">${stockSymbol} Analysis (${companyName || 'Unknown'})</div>
+                        <div>
+                            <label>Base Buffer (%):</label>
+                            <input type="number" class="base-buffer-input" id="baseBufferInput_${stockSymbol}" value="30" step="0.5" onchange="updateBufferCalc('${stockSymbol}')">
+                            <input type="number" class="k-input" id="kInput_${stockSymbol}" value="1" step="0.1" onchange="updateBufferCalc('${stockSymbol}')" style="display: none;">
+                            <span id="athLabel_${stockSymbol}" class="ath-label">${stockSymbol} ATH :</span>
+                            <input type="number" class="ath-value-input" id="athValueInput_${stockSymbol}" value="${athValue || ''}" step="0.01" onchange="updateBufferCalc('${stockSymbol}')">
+                            <div id="athNote_${stockSymbol}" class="ath-note"></div>
+                            <div id="athWarning_${stockSymbol}" class="ath-warning">${isFallback ? 'API error, using fallback 52-week high' : ''}</div>
+                            <div id="calcDisplay_${stockSymbol}" class="calc-display">
+                                <table>
+                                    <tr><td>Current Price</td><td>N/A</td><td></td><td></td></tr>
+                                    <tr><td>Price-to-ATH Ratio</td><td>N/A</td><td></td><td></td></tr>
+                                    <tr><td>Buffer Percentage</td><td>N/A</td><td></td><td></td></tr>
+                                    <tr><td>Strike</td><td>N/A</td><td></td><td></td></tr>
+                                    <tr><td>Minimum Premium</td><td>N/A</td><td>N/A</td><td></td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="threshold-controls">
+                            <input type="number" class="yield-input" id="yieldInput_${stockSymbol}" placeholder="Yield Threshold (%)" value="2.5" step="0.1" onchange="updateSecuredPuts('${stockSymbol}')">
+                            <button onclick="updateSecuredPuts('${stockSymbol}')">Update</button>
+                        </div>
                     </div>
-                    <div class="threshold-controls">
-                        <input type="number" class="yield-input" id="yieldInput_${stockSymbol}" placeholder="Yield Threshold (%)" value="2.5" step="0.1" onchange="updateSecuredPuts('${stockSymbol}')">
-                        <button onclick="updateSecuredPuts('${stockSymbol}')">Update</button>
+                    <div class="matching-rows-container">
+                        <div id="securedPuts_${stockSymbol}" class="matching-rows">
+                            <strong>Secured Puts:</strong>
+                            <table>
+                                <thead>
+                                    <tr><th>Stock</th><th>Strike</th><th>Strike Rel (%)</th><th>Premium</th><th>Yield (%)</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="5">No data yet</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div id="securedPuts_${stockSymbol}" class="matching-rows"></div>
                 </div>
             `;
             
@@ -501,11 +651,11 @@
             if (isNaN(athValue) || isNaN(baseBuffer) || isNaN(k) || isNaN(currentPrice)) {
                 calcDisplay.innerHTML = `
                     <table>
-                        <tr><td>Current Price</td><td>N/A</td></tr>
-                        <tr><td>Price-to-ATH Ratio</td><td>N/A</td></tr>
-                        <tr><td>Buffer Percentage</td><td>N/A</td></tr>
-                        <tr><td>Strike</td><td>N/A</td></tr>
-                        <tr><td>Minimum Premium</td><td>N/A</td></tr>
+                        <tr><td>Current Price</td><td>N/A</td><td></td><td></td></tr>
+                        <tr><td>Price-to-ATH Ratio</td><td>N/A</td><td></td><td></td></tr>
+                        <tr><td>Buffer Percentage</td><td>N/A</td><td></td><td></td></tr>
+                        <tr><td>Strike</td><td>N/A</td><td></td><td></td></tr>
+                        <tr><td>Minimum Premium</td><td>N/A</td><td>N/A</td><td></td></tr>
                     </table>
                 `;
                 return;
@@ -535,11 +685,11 @@
 
             calcDisplay.innerHTML = `
                 <table>
-                    <tr><td>Current Price</td><td>$${currentPrice.toFixed(2)} <span class="${performanceColorClass}">${performanceDisplay}</span></td></tr>
-                    <tr><td>Price-to-ATH Ratio</td><td>${priceToATHRatio.toFixed(2)}</td></tr>
-                    <tr><td>Buffer Percentage</td><td><strong>${(bufferPercentage * 100).toFixed(2)}%</strong></td></tr>
-                    <tr><td>Strike</td><td><strong>$${strike.toFixed(2)}</strong> <span class="${strikeToATHColorClass}">${strikeToATHDisplay}</span></td></tr>
-                    <tr><td>Minimum Premium</td><td><strong>$${closestStrike.toFixed(2)}</strong> / <strong>$${minimumPremiumValue}</strong></td></tr>
+                    <tr><td>Current Price</td><td>$${currentPrice.toFixed(2)}</td><td></td><td><span class="${performanceColorClass}">${performanceDisplay}</span></td></tr>
+                    <tr><td>Price-to-ATH Ratio</td><td>${priceToATHRatio.toFixed(2)}</td><td>$${currentPrice.toFixed(2)} / $${athValue.toFixed(2)}</td><td></td></tr>
+                    <tr><td>Buffer Percentage</td><td><strong>${(bufferPercentage * 100).toFixed(2)}%</strong></td><td>${(baseBuffer * 100).toFixed(2)}% × ${priceToATHRatio.toFixed(2)}</td><td></td></tr>
+                    <tr><td>Strike</td><td><strong>$${strike.toFixed(2)}</strong></td><td>$${currentPrice.toFixed(2)} × (1 - ${bufferPercentage.toFixed(2)})</td><td><span class="${strikeToATHColorClass}">${strikeToATHDisplay}</span></td></tr>
+                    <tr><td>Minimum Premium</td><td><strong>$${closestStrike.toFixed(2)}</strong></td><td><strong>$${minimumPremiumValue}</strong></td><td></td></tr>
                 </table>
             `;
 
