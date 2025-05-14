@@ -300,8 +300,8 @@
         }
 
         #deviceInfo {
-            margin-bottom: 20px;
-            font-size: 0.9em;
+            margin-top: 20px;
+            font-size: 0.75em;
             color: #666;
         }
 
@@ -386,13 +386,13 @@
 <body>
     <div class="container">
         <h1 id="pageTitle">Stock Option Analyzer</h1>
-        <div id="deviceInfo"></div>
         <div class="controls">
-            <input type="text" id="stockSymbolInput" placeholder="Enter stock symbol(s), e.g., AAPL,GOOGL" value="TQQQ,PLTR,MSTR,TSLA,NVDA,SOFI,BAC">
+            <input type="text" id="stockSymbolInput" placeholder="Enter stock symbol(s), e.g., AAPL,GOOGL" value="TQQQ,PLTR,MSTR,TSLA,NVDA">
             <button id="processButton" onclick="processStocks()">Process</button>
         </div>
         <div id="bufferCalcContainer" class="buffer-calc"></div>
         <div id="tableContainer"></div>
+        <div id="deviceInfo"></div>
     </div>
 
     <script type="text/javascript">
