@@ -1,4 +1,43 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -23,15 +62,36 @@
         h1 {
             color: #333;
             text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .version-info {
+            font-size: 0.85em;
+            color: #999;
+            text-align: center;
             margin-bottom: 20px;
         }
 
         .controls {
+            margin-bottom: 10px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .investment-controls {
             margin-bottom: 20px;
             display: flex;
             gap: 15px;
             align-items: center;
             flex-wrap: wrap;
+        }
+
+        .investment-result {
+            font-weight: bold;
+            color: #333;
+            margin-left: 15px;
         }
 
         .threshold-controls {
@@ -67,10 +127,19 @@
             padding: 8px 15px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            box-sizing: border-box;
         }
 
         #stockSymbolInput {
-            width: 400px;
+            width: 445px;
+        }
+
+        #buyingPowerInput, #maintenanceMarginInput {
+            width: 215px;
+        }
+
+        #processButton, #calculateButton {
+            width: 100px;
         }
 
         button {
@@ -117,17 +186,15 @@
             color: #333;
         }
 
-        /* Change color of Stock/ATH (3rd column), Strike/Stock (5th column), and Strike/ATH (6th column) to red in the table body only */
         .matching-rows td:nth-child(3),
         .matching-rows td:nth-child(5),
         .matching-rows td:nth-child(6) {
             color: red;
         }
 
-        /* Highlight row on hover with a rectangle and bold edges */
         .matching-rows table tbody tr:hover {
-            background-color: #f0f8ff; /* Light blue background for highlight */
-            border: 2px solid #000000; /* Bold black border */
+            background-color: #f0f8ff;
+            border: 2px solid #000000;
         }
 
         .positive {
@@ -170,14 +237,24 @@
                 font-size: 1.5em;
             }
 
-            .controls {
+            .controls, .investment-controls {
                 flex-direction: column;
                 align-items: stretch;
             }
 
-            #stockSymbolInput {
+            #stockSymbolInput, #buyingPowerInput, #maintenanceMarginInput {
                 width: 100%;
                 max-width: 300px;
+            }
+
+            #processButton, #calculateButton {
+                width: 100%;
+                max-width: 100px;
+            }
+
+            .investment-result {
+                margin-left: 0;
+                margin-top: 10px;
             }
 
             button {
@@ -222,9 +299,16 @@
 <body>
     <div class="container">
         <h1 id="pageTitle">Stock Option Analyzer</h1>
+        <div class="version-info">Version 1.2</div>
         <div class="controls">
-            <input type="text" id="stockSymbolInput" placeholder="Enter stock symbol(s), e.g., AAPL,GOOGL" value="TQQQ,PLTR,MSTR,TSLA,NVDA,SOFI">
+            <input type="text" id="stockSymbolInput" placeholder="Enter stock symbol(s), e.g., AAPL,GOOGL" value="TQQQ,PLTR,MSTR,TSLA,NVDA,SOFI,RKLB">
             <button id="processButton" onclick="processStocks()">Process</button>
+        </div>
+        <div class="investment-controls">
+            <input type="number" id="buyingPowerInput" placeholder="Buying Power ($)" step="0.01">
+            <input type="number" id="maintenanceMarginInput" placeholder="Maintenance Margin ($)" step="0.01">
+            <button id="calculateButton" onclick="calculateMaxInvestment()">Calculate</button>
+            <span id="investmentResult" class="investment-result"></span>
         </div>
         <div id="bufferCalcContainer" class="buffer-calc"></div>
         <div id="deviceInfo"></div>
@@ -251,6 +335,23 @@
 
         updateDeviceInfo();
         window.addEventListener('resize', updateDeviceInfo);
+
+        function calculateMaxInvestment() {
+            const buyingPowerInput = document.getElementById('buyingPowerInput');
+            const maintenanceMarginInput = document.getElementById('maintenanceMarginInput');
+            const investmentResult = document.getElementById('investmentResult');
+
+            const buyingPower = parseFloat(buyingPowerInput.value) || 0;
+            const maintenanceMargin = parseFloat(maintenanceMarginInput.value) || 0;
+
+            if (buyingPower <= 0 || maintenanceMargin < 0) {
+                investmentResult.textContent = 'Please enter valid positive values for Buying Power and non-negative Maintenance Margin.';
+                return;
+            }
+
+            const maxInvestment = (buyingPower - 0.1 * maintenanceMargin) / 1.1;
+            investmentResult.textContent = `Max. available amount to invest: $ ${maxInvestment.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+        }
 
         var gk_isXlsx = false;
         var gk_xlsxFileLookup = {};
@@ -373,9 +474,6 @@
                     fileData[stockSymbol] = { csvData: [], currentPrice: parseFloat(currentPrice), athValue: parseFloat(athValue) };
                     console.log(`processStocks: fileData for ${stockSymbol}:`, fileData[stockSymbol]);
 
-                    if (stockSymbols.length === 1) document.getElementById('pageTitle').textContent = `${stockSymbol} Option Analysis`;
-                    else document.getElementById('pageTitle').textContent = `Multiple Stocks Analysis`;
-
                     createFileSection(stockSymbol, index, athValue, isFallback, companyName);
                     updateSecuredPuts(stockSymbol);
                 }));
@@ -452,20 +550,18 @@
             const athValue = parseFloat(athValueInput.value) || fileData[stockSymbol].athValue;
             const stockToATH = ((stockPrice - athValue) / athValue) * 100;
 
-            // Adjust maxStrike based on stock price
             let maxStrike = Math.floor(stockPrice);
             if (stockPrice > 50) {
-                maxStrike = Math.floor(maxStrike / 5) * 5; // Ensure maxStrike ends in 0 or 5
+                maxStrike = Math.floor(maxStrike / 5) * 5;
             }
 
-            // Determine increment based on stock price
             let increment;
             if (stockPrice <= 25) increment = 0.5;
             else if (stockPrice <= 50) increment = 1;
-            else increment = 5; // Increment of 5 ensures strikes end in 0 or 5 for stockPrice > 50
+            else increment = 5;
 
             const strikes = [];
-            const minStrikes = 15; // Increased from 10 to 15 rows
+            const minStrikes = 15;
             let startStrike = maxStrike - (minStrikes - 1) * increment;
             for (let strike = startStrike; strike <= maxStrike; strike += increment) {
                 if (strike >= 0) strikes.push(strike);
