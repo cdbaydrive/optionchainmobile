@@ -173,12 +173,14 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
+            table-layout: fixed;
         }
 
         .matching-rows th, .matching-rows td {
             padding: 5px;
             border: 1px solid #ddd;
             text-align: left;
+            width: 11.11%; /* Equal width for 9 columns */
         }
 
         .matching-rows th {
@@ -287,6 +289,7 @@
 
             .matching-rows th, .matching-rows td {
                 padding: 5px;
+                min-width: 80px; /* Minimum width for mobile to ensure readability */
             }
 
             .threshold-controls {
@@ -299,7 +302,7 @@
 <body>
     <div class="container">
         <h1 id="pageTitle">Stock Option Analyzer</h1>
-        <div class="version-info">Version 1.2</div>
+        <div class="version-info">Version 1.2.2</div>
         <div class="controls">
             <input type="text" id="stockSymbolInput" placeholder="Enter stock symbol(s), e.g., AAPL,GOOGL" value="TQQQ,PLTR,MSTR,TSLA,NVDA,SOFI,RKLB">
             <button id="processButton" onclick="processStocks()">Process</button>
@@ -336,6 +339,8 @@
         updateDeviceInfo();
         window.addEventListener('resize', updateDeviceInfo);
 
+        let maxInvestment = 0;
+
         function calculateMaxInvestment() {
             const buyingPowerInput = document.getElementById('buyingPowerInput');
             const maintenanceMarginInput = document.getElementById('maintenanceMarginInput');
@@ -346,11 +351,20 @@
 
             if (buyingPower <= 0 || maintenanceMargin < 0) {
                 investmentResult.textContent = 'Please enter valid positive values for Buying Power and non-negative Maintenance Margin.';
+                maxInvestment = 0;
+                updateAllSecuredPuts();
                 return;
             }
 
-            const maxInvestment = (buyingPower - 0.1 * maintenanceMargin) / 1.1;
-            investmentResult.textContent = `Max. available amount to invest: $ ${maxInvestment.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+            maxInvestment = (buyingPower - 0.1 * maintenanceMargin) / 1.1;
+            investmentResult.textContent = `Max. amount to invest: $ ${maxInvestment.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+            updateAllSecuredPuts();
+        }
+
+        function updateAllSecuredPuts() {
+            Object.keys(fileData).forEach(stockSymbol => {
+                updateSecuredPuts(stockSymbol);
+            });
         }
 
         var gk_isXlsx = false;
@@ -504,10 +518,10 @@
                         <strong>Secured Puts:</strong>
                         <table>
                             <thead>
-                                <tr><th>ATH</th><th>Stock</th><th>Stock/ATH</th><th>Strike</th><th>Strike/Stock</th><th>Strike/ATH</th><th>Premium</th><th>Yield(%)</th></tr>
+                                <tr><th>ATH</th><th>Stock</th><th>Stock/ATH</th><th>Strike</th><th>Strike/Stock</th><th>Strike/ATH</th><th>Premium</th><th>Yield(%)</th><th># Contracts</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td colspan="8">No data yet</td></tr>
+                                <tr><td colspan="9">No data yet</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -535,10 +549,10 @@
                     <strong>Secured Puts:</strong>
                     <table>
                         <thead>
-                            <tr><th>ATH</th><th>Stock</th><th>Stock/ATH</th><th>Strike</th><th>Strike/Stock</th><th>Strike/ATH</th><th>Premium</th><th>Yield(%)</th></tr>
+                            <tr><th>ATH</th><th>Stock</th><th>Stock/ATH</th><th>Strike</th><th>Strike/Stock</th><th>Strike/ATH</th><th>Premium</th><th>Yield(%)</th><th># Contracts</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="8">Error: Missing data</td></tr>
+                            <tr><td colspan="9">Error: Missing data</td></tr>
                         </tbody>
                     </table>
                 `;
@@ -573,12 +587,13 @@
                 strikes.push(...Array(minStrikes - strikes.length).fill(maxStrike));
             }
 
-            let securedPutsHtml = '<strong>Secured Puts:</strong><table><thead><tr><th>ATH</th><th>Stock</th><th>Stock/ATH</th><th>Strike</th><th>Strike/Stock</th><th>Strike/ATH</th><th>Premium</th><th>Yield(%)</th></tr></thead><tbody>';
+            let securedPutsHtml = '<strong>Secured Puts:</strong><table><thead><tr><th>ATH</th><th>Stock</th><th>Stock/ATH</th><th>Strike</th><th>Strike/Stock</th><th>Strike/ATH</th><th>Premium</th><th>Yield(%)</th><th># Contracts</th></tr></thead><tbody>';
 
             strikes.forEach(strike => {
                 const strikeToStock = ((strike - stockPrice) / stockPrice) * 100;
                 const strikeToATH = ((strike - athValue) / athValue) * 100;
                 const premium = (strike * (yieldThreshold / 100)).toFixed(2);
+                const numContracts = maxInvestment > 0 && strike > 0 ? Math.floor(maxInvestment / (strike * 100)) : 0;
                 securedPutsHtml += `
                     <tr>
                         <td>${athValue.toFixed(2)}</td>
@@ -589,6 +604,7 @@
                         <td>${strikeToATH.toFixed(2)}%</td>
                         <td>${premium}</td>
                         <td>${yieldThreshold.toFixed(2)}%</td>
+                        <td>${numContracts}</td>
                     </tr>
                 `;
             });
